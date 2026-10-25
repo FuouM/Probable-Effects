@@ -1127,6 +1127,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "probable-aberration-ae"
+version = "0.1.0"
+dependencies = [
+ "premiere",
+ "probable-ae",
+ "probable-ae-build",
+ "probable-effects",
+]
+
+[[package]]
 name = "probable-ae"
 version = "0.1.0"
 dependencies = [
@@ -1177,6 +1187,46 @@ version = "0.1.0"
 dependencies = [
  "bytemuck",
  "probable-core",
+]
+
+[[package]]
+name = "probable-grain-ae"
+version = "0.1.0"
+dependencies = [
+ "premiere",
+ "probable-ae",
+ "probable-ae-build",
+ "probable-effects",
+]
+
+[[package]]
+name = "probable-halation-ae"
+version = "0.1.0"
+dependencies = [
+ "premiere",
+ "probable-ae",
+ "probable-ae-build",
+ "probable-effects",
+]
+
+[[package]]
+name = "probable-shoulder-ae"
+version = "0.1.0"
+dependencies = [
+ "premiere",
+ "probable-ae",
+ "probable-ae-build",
+ "probable-effects",
+]
+
+[[package]]
+name = "probable-vignette-ae"
+version = "0.1.0"
+dependencies = [
+ "premiere",
+ "probable-ae",
+ "probable-ae-build",
+ "probable-effects",
 ]
 
 [[package]]

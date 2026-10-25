@@ -1,0 +1,18 @@
+[package]
+name = "probable-halation-ae"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+probable-ae.workspace = true
+probable-effects.workspace = true
+# define_effect! references ::premiere when built with_premiere.
+premiere.workspace = true
+
+[build-dependencies]
+probable-ae-build.workspace = true

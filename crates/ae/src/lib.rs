@@ -80,9 +80,24 @@ pub fn params_setup<E: Effect>(params: &mut Parameters<ParamId>) -> Result<(), E
                 }),
                 set_id,
             )?,
+            ParamKind::Color { default } => params.add_customized(
+                id,
+                desc.label,
+                ae::ColorDef::setup(|c| {
+                    let px = to_pixel8(default);
+                    c.set_default(px);
+                    c.set_value(px);
+                }),
+                set_id,
+            )?,
         }
     }
     Ok(())
+}
+
+fn to_pixel8(c: [f32; 3]) -> ae::Pixel8 {
+    let [red, green, blue] = c.map(|v| (v.clamp(0.0, 1.0) * 255.0).round() as u8);
+    ae::Pixel8 { alpha: 255, red, green, blue }
 }
 
 fn read_values(descs: &[ParamDesc], params: &Parameters<ParamId>) -> Result<Values, Error> {
@@ -93,6 +108,10 @@ fn read_values(descs: &[ParamDesc], params: &Parameters<ParamId>) -> Result<Valu
             ParamKind::Float { .. } => Value::Float(p.as_float_slider()?.value() as f32),
             ParamKind::Bool { .. } => Value::Bool(p.as_checkbox()?.value()),
             ParamKind::Choice { .. } => Value::Choice((p.as_popup()?.value() - 1).max(0) as u32),
+            ParamKind::Color { .. } => {
+                let c = p.as_color()?.value();
+                Value::Color([c.red, c.green, c.blue].map(|v| v as f32 / 255.0))
+            }
         };
         values.set(i, v);
     }

@@ -92,6 +92,7 @@ fn describe(p: &ParamDesc) -> String {
         ParamKind::Choice { options, default } => {
             format!("one of {options:?}, default {:?}", options[default as usize])
         }
+        ParamKind::Color { default } => format!("colour #rrggbb or r,g,b in 0..1, default {default:?}"),
     }
 }
 

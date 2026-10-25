@@ -186,8 +186,16 @@ concurrently measured slower (66–91 s), so they run one after another. Current
 8 bpc is identical to the CLI, 16 and 32 bpc are within 1/255 (the smoke output template writes
 8-bit TIFF).
 
-New effect checklist: crate module + `for_each_effect!` entry, `plugins/ae/<name>` (build.rs +
-`export_effect!`), a case in `tests/ae-smoke-cases.ps1`.
+Scripts that replace repeated manual work:
+- `scripts\new-effect.ps1 -Id vignette -Type Vignette -Title "Vignette" [-TimeVarying]` creates the
+  effect module + WGSL (a working pass-through), registers it in `for_each_effect!`, creates
+  `plugins/ae/<id>` and appends a smoke case. Then edit the effect, shader and smoke case params.
+- `scripts\check.ps1 [-Ae]`: fmt, clippy `-D warnings`, tests; with `-Ae` also builds the CLI and
+  plugins, installs them and runs the AE smoke test (close AE first; about 2 minutes).
+
+WGSL notes: `crate::shader()` prepends `shaders/common.wgsl` (luma, hash12, sRGB, unpremul).
+Auto pipeline layouts drop bindings the entry point does not reference, so bind exactly what the
+shader uses. WGSL `smoothstep` needs `edge0 < edge1` (pve's GLSL reversed edges become `1 - smoothstep`).
 
 Gotchas found on the way:
 - `Plugin Loading.log` is the MediaCore loader's log: "No loaders recognized this plugin" is
@@ -205,11 +213,11 @@ Gotchas found on the way:
 | Effect | Tier | Source in pve | Notes | Status |
 |---|---|---|---|---|
 | Bloom | 1 | `post.ts` prefilter/down/up | Grow Bounds | done |
-| Halation | 1 | `post.ts` (pyramid level 3, red-orange tint) | needs colour param | |
-| Chromatic Aberration | 1 | `post.ts` final pass | radial, needs point param (centre) | |
-| Tone Shoulder | 1 | `SHOULDER_GLSL` | pixel-independent | |
-| Film Grain | 1 | `post.ts` final pass | time-varying, `frameIdx` seeding | |
-| Vignette | 1 | `post.ts` final pass | | |
+| Halation | 1 | `post.ts` (pyramid level 3, red-orange tint) | shares `pyramid.rs` with Bloom; colour param | done |
+| Chromatic Aberration | 1 | `post.ts` final pass | radial from frame centre; no centre param yet | done |
+| Tone Shoulder | 1 | `SHOULDER_GLSL` | straight-colour curve, exposure + knee | done |
+| Film Grain | 1 | `post.ts` final pass | time-varying; seeds from `Frame::time`, sRGB-space amplitude | done |
+| Vignette | 1 | `post.ts` final pass | frame-relative ellipse | done |
 | Hatch / Engrave | 2 | `glsl/common.ts` `hatch`, `engrave` | needs `common.wgsl` | |
 | Print (binarise) | 2 | `breaked_neuro/_machine.ts` PrintScene | | |
 | ASCII | 2 | `breaked_neuro/_ascii.ts` | glyph atlas | |
