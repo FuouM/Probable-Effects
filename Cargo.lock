@@ -1211,6 +1211,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "probable-cropmarks-ae"
+version = "0.1.0"
+dependencies = [
+ "premiere",
+ "probable-ae",
+ "probable-ae-build",
+ "probable-effects",
+]
+
+[[package]]
 name = "probable-droste-ae"
 version = "0.1.0"
 dependencies = [
@@ -1250,6 +1260,16 @@ dependencies = [
 
 [[package]]
 name = "probable-hatch-ae"
+version = "0.1.0"
+dependencies = [
+ "premiere",
+ "probable-ae",
+ "probable-ae-build",
+ "probable-effects",
+]
+
+[[package]]
+name = "probable-palette-ae"
 version = "0.1.0"
 dependencies = [
  "premiere",

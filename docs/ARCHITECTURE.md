@@ -230,8 +230,8 @@ Gotchas found on the way:
 | Droste | 2 | `breaked_neuro/_droste.ts` | image-only recursion (square window, ratio, turn, fall, ring colours); the scene's words/arrows are not ported | done |
 | Dust Displace | 2 | `breaked_neuro/_dust.ts` | the file is not in the reference checkout (`dust.ts` is a voxel-cube scene); needs a source or a spec | blocked |
 | Mirror Shards | 2 | `breaked_neuro/_mirror.ts` `MirrorGeom` / `drawShards` | jagged rays, wedge flight; the `at`-shard special case is scene-specific and left out | done |
-| Crop Marks / HUD | 2 | `hud.ts` | generator | |
-| Palette | 2 | `palette.ts` | expression controls from `palette.json` | |
+| Crop Marks / HUD | 2 | `hud.ts` `Hud.cropMarks` | corner marks that fly in/out with `Frame`; sizes scale with comp width; the project `overlay` is per-project and not ported | done |
+| Palette | 2 | `palette.ts` `DEFAULT_HEX` | nine colour controls, image passes through; read by expressions; `Show Swatches` strip to check it | done |
 | Probable Audio | – | `audio.ts` envelopes, hits | AE-only, bakes keyframes via AEGP | |
 
 ### Milestones

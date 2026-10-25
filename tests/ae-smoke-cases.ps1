@@ -16,4 +16,6 @@
     @{ Name = "ascii"; MatchName = "PROBABLE Ascii"; AeParams = @{ "Cell Width (px)" = 16 }; CliParams = @("cell=16") }
     @{ Name = "droste"; MatchName = "PROBABLE Droste"; AeParams = @{ "Fall (levels)" = 0.4; "Ring Opacity" = 1 }; CliParams = @("fall=0.4", "ring_opacity=1") }
     @{ Name = "shards"; MatchName = "PROBABLE MirrorShards"; AeParams = @{ "Shatter (s)" = 0.25 }; CliParams = @("shatter=0.25") }
+    @{ Name = "cropmarks"; MatchName = "PROBABLE CropMarks"; AeParams = @{ "Mark Alpha" = 1; "Line Width" = 3; Frame = 0.6 }; CliParams = @("alpha=1", "width=3", "frame=0.6") }
+    @{ Name = "palette"; MatchName = "PROBABLE Palette"; AeParams = @{ "Show Swatches" = 1 }; CliParams = @("swatches=on") }
 )
