@@ -108,7 +108,7 @@ impl Effect for Bloom {
     const CAN_GROW: bool = true;
 
     fn new(gpu: &Gpu) -> Self {
-        let module = gpu.fullscreen_module("bloom", include_str!("shaders/bloom.wgsl"));
+        let module = crate::shader(gpu, "bloom", include_str!("shaders/bloom.wgsl"));
         Self {
             pyramid: Pyramid::new(gpu),
             composite: gpu.fullscreen_pipeline(&module, "fs_composite", wgpu::TextureFormat::Rgba32Float),

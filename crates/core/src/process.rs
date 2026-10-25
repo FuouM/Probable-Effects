@@ -3,14 +3,16 @@
 use std::sync::OnceLock;
 
 use crate::Error;
+use crate::color::ColorSpace;
 use crate::effect::{Effect, Frame, RenderCx};
 use crate::gpu::{Gpu, gpu};
 use crate::image::{HostImage, HostImageMut, ImageDesc};
 use crate::params::Values;
 
 /// Renders one effect type. Keep one per effect per process (hosts store it in their global data).
+/// Build a fresh one to recompile the effect's shaders (hot reload).
 pub struct Processor<E: Effect> {
-    effect: OnceLock<E>,
+    effect: OnceLock<Result<E, String>>,
 }
 
 impl<E: Effect> Default for Processor<E> {
@@ -22,6 +24,7 @@ impl<E: Effect> Default for Processor<E> {
 impl<E: Effect> Processor<E> {
     /// Render `src` into `dst`. Both are placed by their `origin` in one coordinate space; the
     /// effect runs on the union of both rectangles, so pixels outside `dst` still contribute.
+    /// Source and result use the working space of `frame`.
     pub fn render(
         &self,
         src: &HostImage<'_>,
@@ -29,10 +32,22 @@ impl<E: Effect> Processor<E> {
         frame: &Frame,
         values: &Values,
     ) -> Result<(), Error> {
+        self.render_to(src, dst, frame, frame.space, values)
+    }
+
+    /// Like [`Self::render`], but encodes the result in `out_space` instead of the working space
+    /// (a previewer shows sRGB whatever the pipeline works in).
+    pub fn render_to(
+        &self,
+        src: &HostImage<'_>,
+        dst: &mut HostImageMut<'_>,
+        frame: &Frame,
+        out_space: ColorSpace,
+        values: &Values,
+    ) -> Result<(), Error> {
         src.desc.validate(src.data.len())?;
         dst.desc.validate(dst.data.len())?;
         let gpu = gpu()?;
-        let effect = self.effect.get_or_init(|| E::new(gpu));
 
         let s = &src.desc;
         let d = &dst.desc;
@@ -46,8 +61,23 @@ impl<E: Effect> Processor<E> {
             return Err(Error::Image(format!("canvas {}x{} exceeds GPU limit {max}", size[0], size[1])));
         }
 
+        // Creating the effect compiles its shaders: a broken shader must surface as an error
+        // here (the previewer shows it), not as a device panic. The first failure is kept, so
+        // later renders report the shader error rather than a downstream "pipeline is invalid".
+        let effect = self
+            .effect
+            .get_or_init(|| {
+                let scope = gpu.device.push_error_scope(wgpu::ErrorFilter::Validation);
+                let effect = E::new(gpu);
+                match pollster::block_on(scope.pop()) {
+                    Some(e) => Err(e.to_string()),
+                    None => Ok(effect),
+                }
+            })
+            .as_ref()
+            .map_err(|e| Error::Gpu(e.clone()))?;
         let scope = gpu.device.push_error_scope(wgpu::ErrorFilter::Validation);
-        let result = run(gpu, effect, src, dst, frame, values, size, [x0, y0]);
+        let result = run(gpu, effect, src, dst, frame, out_space, values, size, [x0, y0]);
         if let Some(e) = pollster::block_on(scope.pop()) {
             return Err(Error::Gpu(e.to_string()));
         }
@@ -62,6 +92,7 @@ fn run<E: Effect>(
     src: &HostImage<'_>,
     dst: &mut HostImageMut<'_>,
     frame: &Frame,
+    out_space: ColorSpace,
     values: &Values,
     size: [u32; 2],
     canvas_origin: [i32; 2],
@@ -90,7 +121,7 @@ fn run<E: Effect>(
         &mut RenderCx { gpu, encoder: &mut encoder, src: &canvas_in.view, dst: &canvas_out.view, size, frame },
         values,
     );
-    gpu.io.pack(&gpu.device, &mut encoder, &d, &host_out.view, &canvas_out.view, rel(&d), frame.space);
+    gpu.io.pack(&gpu.device, &mut encoder, &d, &host_out.view, &canvas_out.view, rel(&d), out_space);
 
     let row = d.row_bytes();
     let padded = row.next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT as usize);
@@ -110,17 +141,30 @@ fn run<E: Effect>(
     slice.map_async(wgpu::MapMode::Read, move |r| {
         let _ = tx.send(r);
     });
-    gpu.device
-        .poll(wgpu::PollType::Wait { submission_index: Some(submission), timeout: None })
-        .map_err(|e| Error::Gpu(format!("poll: {e}")))?;
-    rx.recv().map_err(|_| Error::Gpu("map callback dropped".into()))?.map_err(|e| Error::Gpu(format!("map: {e}")))?;
-    {
+    let read = || -> Result<(), Error> {
+        gpu.device
+            .poll(wgpu::PollType::Wait { submission_index: Some(submission), timeout: None })
+            .map_err(|e| Error::Gpu(format!("poll: {e}")))?;
+        rx.recv()
+            .map_err(|_| Error::Gpu("map callback dropped".into()))?
+            .map_err(|e| Error::Gpu(format!("map: {e}")))?;
         let mapped = slice.get_mapped_range().map_err(|e| Error::Gpu(format!("mapped range: {e}")))?;
         for (y, chunk) in mapped.chunks_exact(padded).enumerate() {
             let at = y * d.stride;
             dst.data[at..at + row].copy_from_slice(&chunk[..row]);
         }
+        Ok(())
+    };
+    match read() {
+        Ok(()) => {
+            staging.buffer().unmap();
+            Ok(())
+        }
+        Err(e) => {
+            // The buffer may still be mapped (a failed submission never completes the map):
+            // pooling it would poison every later render of this size.
+            staging.discard();
+            Err(e)
+        }
     }
-    staging.buffer().unmap();
-    Ok(())
 }

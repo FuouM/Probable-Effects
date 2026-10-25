@@ -6,6 +6,9 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[lib]
+path = "src/lib.rs"
+
 [[bin]]
 name = "probable"
 path = "src/main.rs"
@@ -13,4 +16,5 @@ path = "src/main.rs"
 [dependencies]
 probable-core.workspace = true
 probable-effects.workspace = true
+tiny_http = "0.12"
 image.workspace = true

@@ -262,11 +262,16 @@ impl PooledBuffer<'_> {
     pub(crate) fn buffer(&self) -> &wgpu::Buffer {
         self.buffer.as_ref().unwrap()
     }
+
+    /// Drop the buffer instead of returning it to the pool.
+    pub(crate) fn discard(mut self) {
+        self.buffer = None;
+    }
 }
 
 impl Drop for PooledBuffer<'_> {
     fn drop(&mut self) {
-        let buffer = self.buffer.take().unwrap();
+        let Some(buffer) = self.buffer.take() else { return };
         let mut pool = self.gpu.staging.lock().unwrap();
         if pool.len() >= POOL_CAP / 4 {
             pool.remove(0);

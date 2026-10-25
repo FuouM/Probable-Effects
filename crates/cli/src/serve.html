@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Probable preview</title>
+<style>
+  :root { color-scheme: dark; --bg: #121214; --panel: #1a1a1d; --line: #2c2c31; --fg: #e6e2d8; --dim: #8d8a82; --accent: #ff4d12; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); font: 13px/1.4 system-ui, sans-serif; }
+  body { display: grid; grid-template-columns: 340px 1fr; }
+  aside { background: var(--panel); border-right: 1px solid var(--line); padding: 14px; overflow-y: auto; }
+  h1 { font-size: 15px; margin: 0 0 10px; letter-spacing: .04em; }
+  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin: 18px 0 6px; }
+  select, input, button { font: inherit; color: inherit; background: #26262b; border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px; }
+  button { cursor: pointer; } button:hover { border-color: var(--accent); }
+  #effect { width: 100%; }
+  #desc { color: var(--dim); margin: 8px 0 0; }
+  .row { display: grid; grid-template-columns: 1fr; gap: 2px; margin: 8px 0; }
+  .row label { color: var(--dim); display: flex; justify-content: space-between; }
+  .ctl { display: grid; grid-template-columns: 1fr 72px; gap: 8px; align-items: center; }
+  .ctl input[type=range] { width: 100%; padding: 0; accent-color: var(--accent); }
+  .ctl input[type=number] { width: 72px; }
+  input[type=color] { width: 56px; height: 26px; padding: 1px; }
+  .buttons { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  #imginfo { color: var(--dim); margin-top: 14px; word-break: break-all; }
+  main { position: relative; overflow: hidden; }
+  #view { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  canvas { display: block; background: conic-gradient(#55555a 25%, #46464b 0 50%, #55555a 0 75%, #46464b 0) 0 0 / 16px 16px; }
+  canvas.px { image-rendering: pixelated; }
+  #status { position: absolute; left: 10px; bottom: 8px; background: #000a; padding: 3px 8px; border-radius: 4px; color: var(--dim); pointer-events: none; }
+  #err { position: absolute; left: 10px; right: 10px; top: 10px; background: #3a1210; border: 1px solid #9c2a1d; border-radius: 4px; padding: 8px 10px; white-space: pre-wrap; font: 12px/1.4 ui-monospace, Consolas, monospace; max-height: 60%; overflow: auto; display: none; }
+  #drop { position: absolute; inset: 0; border: 3px dashed var(--accent); display: none; align-items: center; justify-content: center; font-size: 20px; background: #000a; pointer-events: none; }
+</style>
+</head>
+<body>
+<aside>
+  <h1>PROBABLE <span style="color:var(--dim)">preview</span></h1>
+  <select id="effect"></select>
+  <p id="desc"></p>
+  <div id="params"></div>
+  <h2>Host</h2>
+  <div id="host"></div>
+  <h2>Time</h2>
+  <div class="row"><div class="ctl"><input type="range" id="time" min="0" max="10" step="any" value="0"><input type="number" id="timeN" step="any" value="0"></div></div>
+  <div class="buttons">
+    <button id="play">Play</button>
+    <button id="fit">Fit</button>
+    <button id="one">100%</button>
+    <button id="reset">Reset</button>
+    <button id="copy">Copy CLI</button>
+  </div>
+  <div id="imginfo"></div>
+</aside>
+<main id="stage">
+  <div id="view"><canvas id="cv" width="16" height="16"></canvas></div>
+  <div id="status">loading…</div>
+  <div id="err"></div>
+  <div id="drop">Drop an image</div>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+let effects = [], image = {}, version = 0, cur = null;
+let values = {}, time = 0, playing = false, lastFrame = 0;
+let pending = false, busy = false, sized = '';
+const view = { x: 0, y: 0, s: 1 };
+
+const hexOk = (v) => /^#[0-9a-f]{6}$/i.test(v);
+const all = (e) => [...e.params, ...e.host];
+const storeKey = (e) => 'probable.' + e.key;
+
+function defaults(e) {
+  const v = {};
+  for (const p of all(e)) v[p.key] = p.default;
+  return v;
+}
+
+function selectEffect(key) {
+  cur = effects.find((e) => e.key === key) || effects[0];
+  localStorage.setItem('probable.effect', cur.key);
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(storeKey(cur)) || '{}'); } catch {}
+  values = { ...defaults(cur), ...saved };
+  $('#desc').textContent = cur.description;
+  buildControls();
+  schedule();
+}
+
+function changed() {
+  localStorage.setItem(storeKey(cur), JSON.stringify(values));
+  schedule();
+}
+
+function buildControls() {
+  for (const [id, list] of [['#params', cur.params], ['#host', cur.host]]) {
+    const root = $(id);
+    root.textContent = '';
+    for (const p of list) root.append(control(p));
+  }
+}
+
+function control(p) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  const label = document.createElement('label');
+  label.textContent = p.label;
+  row.append(label);
+  const set = (v) => { values[p.key] = v; changed(); };
+  if (p.kind === 'float') {
+    const ctl = document.createElement('div'); ctl.className = 'ctl';
+    const range = document.createElement('input');
+    range.type = 'range'; range.min = p.slider_min; range.max = p.slider_max; range.step = 'any'; range.value = values[p.key];
+    const num = document.createElement('input');
+    num.type = 'number'; num.min = p.min; num.max = p.max; num.step = 'any'; num.value = +values[p.key].toFixed(p.precision + 2);
+    range.oninput = () => { num.value = +(+range.value).toFixed(p.precision + 2); set(+range.value); };
+    num.onchange = () => {
+      const v = Math.min(p.max, Math.max(p.min, +num.value));
+      num.value = v; range.value = v; set(v);
+    };
+    ctl.append(range, num); row.append(ctl);
+  } else if (p.kind === 'bool') {
+    const box = document.createElement('input');
+    box.type = 'checkbox'; box.checked = !!values[p.key];
+    box.onchange = () => set(box.checked);
+    label.append(box);
+  } else if (p.kind === 'choice') {
+    const sel = document.createElement('select');
+    p.options.forEach((o, i) => sel.add(new Option(o, i)));
+    sel.value = values[p.key];
+    sel.onchange = () => set(+sel.value);
+    row.append(sel);
+  } else if (p.kind === 'color') {
+    const c = document.createElement('input');
+    c.type = 'color'; c.value = hexOk(values[p.key]) ? values[p.key] : p.default;
+    c.oninput = () => set(c.value);
+    row.append(c);
+  }
+  return row;
+}
+
+const fmt = (p, v) =>
+  p.kind === 'bool' ? (v ? 'on' : 'off') : p.kind === 'float' ? String(v) : String(v);
+
+function cliArgs() {
+  return all(cur).filter((p) => values[p.key] !== p.default).map((p) => `${p.key}=${fmt(p, values[p.key])}`);
+}
+
+function query() {
+  const q = new URLSearchParams({ effect: cur.key, time: String(time) });
+  for (const p of all(cur)) q.set(p.key, fmt(p, values[p.key]));
+  return q.toString();
+}
+
+function schedule() {
+  pending = true;
+  if (!busy) run();
+}
+
+async function run() {
+  busy = true;
+  while (pending) {
+    pending = false;
+    try { await render(); } catch (e) { showErr(String(e)); }
+  }
+  busy = false;
+}
+
+function showErr(msg) {
+  const el = $('#err');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+async function render() {
+  const t0 = performance.now();
+  const res = await fetch('/api/render?' + query());
+  if (!res.ok) { showErr(await res.text()); return; }
+  showErr('');
+  const w = +res.headers.get('X-Width'), h = +res.headers.get('X-Height');
+  const data = new Uint8ClampedArray(await res.arrayBuffer());
+  const cv = $('#cv');
+  cv.width = w; cv.height = h;
+  cv.getContext('2d').putImageData(new ImageData(data, w, h), 0, 0);
+  const key = `${w}x${h}`;
+  if (key !== sized) { sized = key; fit(); }
+  $('#status').textContent =
+    `${w}×${h} · gpu ${res.headers.get('X-Ms')} ms · round trip ${(performance.now() - t0).toFixed(0)} ms · ${(view.s * 100).toFixed(0)}%`;
+}
+
+function applyView() {
+  $('#view').style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.s})`;
+  $('#cv').classList.toggle('px', view.s >= 2);
+}
+
+function fit() {
+  const cv = $('#cv'), st = $('#stage');
+  view.s = Math.min(st.clientWidth / cv.width, st.clientHeight / cv.height) * 0.95;
+  view.x = (st.clientWidth - cv.width * view.s) / 2;
+  view.y = (st.clientHeight - cv.height * view.s) / 2;
+  applyView();
+}
+
+function oneToOne() {
+  const cv = $('#cv'), st = $('#stage');
+  view.s = 1;
+  view.x = (st.clientWidth - cv.width) / 2;
+  view.y = (st.clientHeight - cv.height) / 2;
+  applyView();
+}
+
+$('#stage').addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const r = $('#stage').getBoundingClientRect();
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+  const k = Math.exp(-e.deltaY * 0.0015);
+  const s = Math.min(64, Math.max(0.02, view.s * k));
+  view.x = mx - (mx - view.x) * (s / view.s);
+  view.y = my - (my - view.y) * (s / view.s);
+  view.s = s;
+  applyView();
+}, { passive: false });
+
+let drag = null;
+$('#stage').addEventListener('pointerdown', (e) => {
+  drag = { x: e.clientX - view.x, y: e.clientY - view.y };
+  $('#stage').setPointerCapture(e.pointerId);
+});
+$('#stage').addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  view.x = e.clientX - drag.x; view.y = e.clientY - drag.y; applyView();
+});
+$('#stage').addEventListener('pointerup', () => { drag = null; });
+
+// Time
+function setTime(t) {
+  time = Math.max(0, t);
+  if (time > +$('#time').max) $('#time').max = Math.ceil(time);
+  $('#time').value = time;
+  $('#timeN').value = +time.toFixed(3);
+}
+$('#time').oninput = () => { setTime(+$('#time').value); schedule(); };
+$('#timeN').onchange = () => { setTime(+$('#timeN').value); schedule(); };
+$('#play').onclick = () => {
+  playing = !playing;
+  $('#play').textContent = playing ? 'Pause' : 'Play';
+  lastFrame = performance.now();
+  if (playing) requestAnimationFrame(tick);
+};
+function tick(now) {
+  if (!playing) return;
+  setTime(time + (now - lastFrame) / 1000);
+  lastFrame = now;
+  schedule();
+  requestAnimationFrame(tick);
+}
+
+$('#fit').onclick = fit;
+$('#one').onclick = oneToOne;
+$('#reset').onclick = () => { values = defaults(cur); changed(); buildControls(); };
+$('#copy').onclick = async () => {
+  const args = cliArgs();
+  if (time) args.push('--time', String(+time.toFixed(3)));
+  const cmd = `probable render ${cur.key} ${image.name || 'in.png'} out.png ${args.join(' ')}`.trim();
+  try { await navigator.clipboard.writeText(cmd); } catch { prompt('Copy:', cmd); }
+  $('#copy').textContent = 'Copied';
+  setTimeout(() => ($('#copy').textContent = 'Copy CLI'), 1200);
+};
+$('#effect').onchange = () => selectEffect($('#effect').value);
+
+// Images dropped on the page replace the source.
+const drop = $('#drop');
+addEventListener('dragover', (e) => { e.preventDefault(); drop.style.display = 'flex'; });
+addEventListener('dragleave', (e) => { if (!e.relatedTarget) drop.style.display = 'none'; });
+addEventListener('drop', async (e) => {
+  e.preventDefault();
+  drop.style.display = 'none';
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const res = await fetch('/api/image?name=' + encodeURIComponent(file.name), { method: 'POST', body: file });
+  if (!res.ok) { showErr(await res.text()); return; }
+  sized = '';
+  await poll();
+});
+addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'f') fit();
+  if (e.key === '1') oneToOne();
+  if (e.key === ' ') { e.preventDefault(); $('#play').click(); }
+});
+
+function showImage() {
+  $('#imginfo').textContent = `${image.name} · ${image.width}×${image.height} · ${image.depth}` +
+    (image.watch ? ' · watching shaders' : '');
+}
+
+// Shader edits (--watch) and image changes bump the server's version.
+async function poll() {
+  try {
+    const s = await (await fetch('/api/state')).json();
+    image = s.image; showImage();
+    if (s.version !== version) { version = s.version; schedule(); }
+  } catch {}
+}
+
+async function init() {
+  const r = await (await fetch('/api/effects')).json();
+  effects = r.effects; image = r.image; version = r.version; showImage();
+  for (const e of effects) $('#effect').add(new Option(`${e.name}  (${e.key})`, e.key));
+  const first = localStorage.getItem('probable.effect');
+  $('#effect').value = effects.some((e) => e.key === first) ? first : effects[0].key;
+  selectEffect($('#effect').value);
+  setInterval(poll, 400);
+}
+init();
+</script>
+</body>
+</html>

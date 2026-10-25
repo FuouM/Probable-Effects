@@ -186,6 +186,12 @@ concurrently measured slower (66–91 s), so they run one after another. Current
 8 bpc is identical to the CLI, 16 and 32 bpc are within 1/255 (the smoke output template writes
 8-bit TIFF).
 
+Preview while writing shaders: `.\scripts\preview.ps1`. `--watch` sets `PROBABLE_SHADER_DIR` so
+`crate::shader()` reads `crates\effects\src\shaders\<label>.wgsl` from disk instead of the embedded
+copy, and recompiles every effect when one changes; a compile error shows on the page and the
+next save recovers. The page's `Copy CLI` button prints the `probable render ...` line for the
+current settings, ready for a smoke case.
+
 Scripts that replace repeated manual work:
 - `scripts\new-effect.ps1 -Id vignette -Type Vignette -Title "Vignette" [-TimeVarying]` creates the
   effect module + WGSL (a working pass-through), registers it in `for_each_effect!`, creates
@@ -233,8 +239,11 @@ Gotchas found on the way:
 1. **Foundation** (done): workspace, core runtime, Bloom, CLI, AE adapter, headless AE smoke test.
 2. **Tier 1**: Halation, CA, Tone Shoulder, Grain, Vignette; colour/point params; golden-image
    tests per effect through the CLI; `Auto` working space from AE colour settings.
-3. **Preview app**: native window (winit + egui) with sliders and WGSL hot reload, so effect
-   work needs neither AE nor re-running the CLI.
+3. **Preview** (done): `probable serve --watch` (or `scripts\preview.ps1`) serves a browser page with
+   sliders generated from the param schema, drag-and-drop images, time/play, pan/zoom and
+   shader hot reload, rendering with the same native wgpu code as the CLI and AE. The page is
+   plain HTML/JS and is meant to become the front end of the WebGPU catalog (milestone 7) by
+   swapping its render call for an in-browser one.
 4. **Tier 2**: `common.wgsl`, then the stylise effects.
 5. **Probable Audio**: layer audio checkout, pve's envelope/onset analysis, keyframe baking.
 6. **OpenFX adapter**: one `.ofx.bundle` with every effect (ntsc-rs's `openfx-plugin` is the

@@ -30,8 +30,20 @@ pub use vignette::Vignette;
 
 /// Compiles `source` with `common.wgsl` prepended (and the fullscreen vertex stage, which
 /// `fullscreen_module` adds).
+///
+/// With `PROBABLE_SHADER_DIR` set, `<dir>/<label>.wgsl` (and `common.wgsl`) replace the embedded
+/// text when present: edit a shader and rebuild the effect without recompiling Rust. The preview
+/// app does this; hosts never set the variable.
 pub(crate) fn shader(gpu: &Gpu, label: &str, source: &str) -> wgpu::ShaderModule {
-    gpu.fullscreen_module(label, &format!("{}\n{source}", include_str!("shaders/common.wgsl")))
+    let source = shader_text(label, source);
+    let common = shader_text("common", include_str!("shaders/common.wgsl"));
+    gpu.fullscreen_module(label, &format!("{common}\n{source}"))
+}
+
+fn shader_text(label: &str, embedded: &str) -> String {
+    std::env::var_os("PROBABLE_SHADER_DIR")
+        .and_then(|dir| std::fs::read_to_string(std::path::Path::new(&dir).join(format!("{label}.wgsl"))).ok())
+        .unwrap_or_else(|| embedded.to_owned())
 }
 
 /// Calls `$m!(Type, "cli-name")` once per effect. The CLI uses it to build its registry; add
