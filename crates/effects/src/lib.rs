@@ -4,17 +4,27 @@
 use probable_core::{Gpu, wgpu};
 
 mod aberration;
+mod ascii;
 mod bloom;
+mod droste;
 mod grain;
 mod halation;
+mod hatch;
+mod print;
 mod pyramid;
+mod shards;
 mod shoulder;
 mod vignette;
 
 pub use aberration::ChromaticAberration;
+pub use ascii::Ascii;
 pub use bloom::Bloom;
+pub use droste::Droste;
 pub use grain::FilmGrain;
 pub use halation::Halation;
+pub use hatch::Hatch;
+pub use print::Print;
+pub use shards::MirrorShards;
 pub use shoulder::Shoulder;
 pub use vignette::Vignette;
 
@@ -35,5 +45,10 @@ macro_rules! for_each_effect {
         $m!($crate::ChromaticAberration, "aberration");
         $m!($crate::FilmGrain, "grain");
         $m!($crate::Halation, "halation");
+        $m!($crate::Hatch, "hatch");
+        $m!($crate::Print, "print");
+        $m!($crate::Ascii, "ascii");
+        $m!($crate::Droste, "droste");
+        $m!($crate::MirrorShards, "shards");
     };
 }

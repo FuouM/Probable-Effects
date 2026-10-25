@@ -218,12 +218,12 @@ Gotchas found on the way:
 | Tone Shoulder | 1 | `SHOULDER_GLSL` | straight-colour curve, exposure + knee | done |
 | Film Grain | 1 | `post.ts` final pass | time-varying; seeds from `Frame::time`, sRGB-space amplitude | done |
 | Vignette | 1 | `post.ts` final pass | frame-relative ellipse | done |
-| Hatch / Engrave | 2 | `glsl/common.ts` `hatch`, `engrave` | needs `common.wgsl` | |
-| Print (binarise) | 2 | `breaked_neuro/_machine.ts` PrintScene | | |
-| ASCII | 2 | `breaked_neuro/_ascii.ts` | glyph atlas | |
-| Droste | 2 | `breaked_neuro/_droste.ts` | scene-like, larger port | |
-| Dust Displace | 2 | `breaked_neuro/_dust.ts` | | |
-| Mirror Shards | 2 | `breaked_neuro/_mirror.ts` | scene-like, larger port | |
+| Hatch / Engrave | 2 | `glsl/common.ts` `hatch`, `engrave` | tone-driven; Hatch or Engrave style | done |
+| Print (binarise) | 2 | `breaked_neuro/_kit.ts` `PRINT` shader | two halftone screens + ink bleed; plate overlays (Life plane, scratches, clumps) left out; bleed animates through the `Boil Seed` param | done |
+| ASCII | 2 | `breaked_neuro/_ascii.ts` | 5x7 bitmap glyphs of the 10-char ramp, not pve's font atlas | done |
+| Droste | 2 | `breaked_neuro/_droste.ts` | image-only recursion (square window, ratio, turn, fall, ring colours); the scene's words/arrows are not ported | done |
+| Dust Displace | 2 | `breaked_neuro/_dust.ts` | the file is not in the reference checkout (`dust.ts` is a voxel-cube scene); needs a source or a spec | blocked |
+| Mirror Shards | 2 | `breaked_neuro/_mirror.ts` `MirrorGeom` / `drawShards` | jagged rays, wedge flight; the `at`-shard special case is scene-specific and left out | done |
 | Crop Marks / HUD | 2 | `hud.ts` | generator | |
 | Palette | 2 | `palette.ts` | expression controls from `palette.json` | |
 | Probable Audio | – | `audio.ts` envelopes, hits | AE-only, bakes keyframes via AEGP | |

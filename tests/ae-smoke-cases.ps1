@@ -11,4 +11,9 @@
     @{ Name = "aberration"; MatchName = "PROBABLE ChromaticAberration"; AeParams = @{ "Amount (px)" = 8 }; CliParams = @("amount=8") }
     @{ Name = "grain"; MatchName = "PROBABLE FilmGrain"; AeParams = @{ Amount = 0.1 }; CliParams = @("amount=0.1") }
     @{ Name = "vignette"; MatchName = "PROBABLE Vignette"; AeParams = @{ Amount = 0.8 }; CliParams = @("amount=0.8") }
+    @{ Name = "hatch"; MatchName = "PROBABLE Hatch"; AeParams = @{ "Line Spacing (px)" = 8 }; CliParams = @("spacing=8") }
+    @{ Name = "print"; MatchName = "PROBABLE Print"; AeParams = @{ "Halftone Cell (px)" = 6; "Ink Bleed (px)" = 4 }; CliParams = @("cell=6", "bleed=4") }
+    @{ Name = "ascii"; MatchName = "PROBABLE Ascii"; AeParams = @{ "Cell Width (px)" = 16 }; CliParams = @("cell=16") }
+    @{ Name = "droste"; MatchName = "PROBABLE Droste"; AeParams = @{ "Fall (levels)" = 0.4; "Ring Opacity" = 1 }; CliParams = @("fall=0.4", "ring_opacity=1") }
+    @{ Name = "shards"; MatchName = "PROBABLE MirrorShards"; AeParams = @{ "Shatter (s)" = 0.25 }; CliParams = @("shatter=0.25") }
 )
