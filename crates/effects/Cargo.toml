@@ -1,0 +1,11 @@
+[package]
+name = "probable-effects"
+description = "Probable Effects: GPU effects ported from probable-video-editor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+probable-core.workspace = true
+bytemuck.workspace = true

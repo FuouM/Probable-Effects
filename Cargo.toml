@@ -1,0 +1,46 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "plugins/ae/*"]
+default-members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+repository = "https://github.com/FuouM/Probable-Effects"
+
+[workspace.dependencies]
+probable-core = { path = "crates/core" }
+probable-effects = { path = "crates/effects" }
+probable-ae = { path = "crates/ae" }
+probable-ae-build = { path = "crates/ae-build" }
+# crates.io after-effects 0.4.0 / pipl 0.1.1 predate the cfg flags (threaded_rendering, ...) and
+# macro paths the adapter relies on; pin the upstream commit the references were taken from.
+after-effects = { git = "https://github.com/virtualritz/after-effects", rev = "c2eb86609b293f046b18bc3e18e110dcc9ae9f17" }
+premiere = { git = "https://github.com/virtualritz/after-effects", rev = "c2eb86609b293f046b18bc3e18e110dcc9ae9f17" }
+pipl = { git = "https://github.com/virtualritz/after-effects", rev = "c2eb86609b293f046b18bc3e18e110dcc9ae9f17" }
+wgpu = "30"
+pollster = "1"
+bytemuck = { version = "1", features = ["derive"] }
+log = "0.4"
+image = { version = "0.25", default-features = false, features = ["png", "exr", "tiff"] }
+
+[profile.dev]
+opt-level = 1
+
+# Pixel conversion and image codecs dominate CLI/test time; keep them fast in dev.
+[profile.dev.package."image"]
+opt-level = 3
+
+[profile.dev.package."png"]
+opt-level = 3
+
+[profile.dev.package."exr"]
+opt-level = 3
+
+# Plugins catch panics with catch_unwind (after-effects `catch_panics`): never `panic = "abort"`.
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 4
+strip = true

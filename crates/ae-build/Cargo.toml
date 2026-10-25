@@ -1,0 +1,10 @@
+[package]
+name = "probable-ae-build"
+description = "build.rs helper: PiPL resource for a Probable AE/Premiere plugin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+pipl.workspace = true

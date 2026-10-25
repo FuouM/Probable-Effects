@@ -1,0 +1,12 @@
+[package]
+name = "probable-ae"
+description = "After Effects / Premiere Pro adapter shared by every Probable plugin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+probable-core.workspace = true
+after-effects.workspace = true
+log.workspace = true

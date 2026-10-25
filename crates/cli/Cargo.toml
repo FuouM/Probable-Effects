@@ -1,0 +1,16 @@
+[package]
+name = "probable-cli"
+description = "Render Probable effects on still images without a host application"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "probable"
+path = "src/main.rs"
+
+[dependencies]
+probable-core.workspace = true
+probable-effects.workspace = true
+image.workspace = true
